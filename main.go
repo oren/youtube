@@ -4,31 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
-
-// load text file into slice of webpages
-func ExampleScrape() {
-	doc, err := goquery.NewDocument("https://www.youtube.com/user/LastWeekTonight/videos")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("doc", doc)
-
-	doc.Find(".channels-content-item").Each(func(i int, s *goquery.Selection) {
-		title := s.Find(".yt-lockup-title").Text()
-		url, exist := s.Find(".yt-uix-sessionlink").Attr("href")
-		if exist == false {
-			fmt.Println("href doesn't exist")
-		}
-		fmt.Println("title", title)
-		fmt.Println("url", url)
-		fmt.Println("\n")
-	})
-}
 
 func loadFile(filename string) []string {
 	content, err := ioutil.ReadFile(filename)
@@ -40,15 +20,34 @@ func loadFile(filename string) []string {
 	return lines
 }
 
-func getRecentURL() string {
-	return "hi"
+func getRecentURL(webpage string) string {
+	doc, err := goquery.NewDocument(webpage)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// url := doc.Find(".yt-uix-sessionlink").First()
+	// fmt.Println("url", url.Find("").Attr("href"))
+	// fmt.Printf("%+v\n", url)
+
+	out := ""
+	doc.Find(".channels-content-item").EachWithBreak(func(i int, s *goquery.Selection) bool {
+		url, exist := s.Find(".yt-uix-sessionlink").Attr("href")
+		if exist == false {
+			fmt.Println("href doesn't exist")
+		}
+		out = url
+		return false
+	})
+
+	return out
 }
 
 func updateLine(line string) string {
 	ln := strings.Split(line, " ")
-	recentURL := getRecentURL()
+	recentURL := getRecentURL(ln[0])
 	if len(ln) == 1 || recentURL != ln[1] {
-		return ln[0] + recentURL
+		return (ln[0] + " " + recentURL + "\n")
 	}
 
 	return ""
@@ -56,17 +55,35 @@ func updateLine(line string) string {
 
 func main() {
 	in := []string{}
+	updatedFile := []string{}
 	out := []string{}
 
 	in = loadFile("urls")
 	for _, line := range in {
+		if line == "" {
+			continue
+		}
 		updatedLine := updateLine(line)
-		if updatedLine == "" {
-			out = append(out, updatedLine)
+		if updatedLine != "" {
+			updatedFile = append(updatedFile, updatedLine)
+			out = append(out, "youtube.com"+strings.Split(updatedLine, " ")[1])
 		}
 	}
 
-	fmt.Println(out)
+	f, err := os.Create("output")
+	if err != nil {
+		fmt.Println(err, "can't create file")
+	}
+	defer f.Close()
 
-	// ExampleScrape()
+	for _, s := range updatedFile {
+		_, err := f.WriteString(s)
+		if err != nil {
+			fmt.Println(err, "write string to file")
+		}
+	}
+
+	for _, s := range out {
+		os.Stdout.WriteString(s)
+	}
 }
