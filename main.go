@@ -40,19 +40,30 @@ func loadFile(filename string) []string {
 	return lines
 }
 
+func getRecentURL() string {
+	return "hi"
+}
+
 func updateLine(line string) string {
 	ln := strings.Split(line, " ")
-	fmt.Println(ln[0])
-	return "wow"
+	recentURL := getRecentURL()
+	if len(ln) == 1 || recentURL != ln[1] {
+		return ln[0] + recentURL
+	}
+
+	return ""
 }
 
 func main() {
 	in := []string{}
 	out := []string{}
+
 	in = loadFile("urls")
 	for _, line := range in {
 		updatedLine := updateLine(line)
-		out = append(out, updatedLine)
+		if updatedLine == "" {
+			out = append(out, updatedLine)
+		}
 	}
 
 	fmt.Println(out)
