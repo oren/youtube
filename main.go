@@ -47,7 +47,7 @@ func updateLine(line string) (string, string) {
 	ln := strings.Split(line, " ")
 	recentURL := getRecentURL(ln[0])
 	if len(ln) == 1 || recentURL != ln[1] {
-		return ln[0] + " " + recentURL + "\n", ln[0] + " " + recentURL + "\n"
+		return ln[0] + " " + recentURL + "\n", ln[0]
 	}
 
 	return line + "\n", ""
@@ -69,7 +69,7 @@ func main() {
 		outFile = append(outFile, fileLine)
 
 		if outLine != "" {
-			out = append(out, "youtube.com"+strings.Split(outLine, " ")[1])
+			out = append(out, outLine+"\n")
 		}
 	}
 
