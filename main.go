@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
+// load text file into slice of webpages
 func ExampleScrape() {
 	doc, err := goquery.NewDocument("https://www.youtube.com/user/LastWeekTonight/videos")
 	if err != nil {
@@ -27,6 +30,32 @@ func ExampleScrape() {
 	})
 }
 
+func loadFile(filename string) []string {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err, "can't read file")
+	}
+	lines := strings.Split(string(content), "\n")
+
+	return lines
+}
+
+func updateLine(line string) string {
+	ln := strings.Split(line, " ")
+	fmt.Println(ln[0])
+	return "wow"
+}
+
 func main() {
-	ExampleScrape()
+	in := []string{}
+	out := []string{}
+	in = loadFile("urls")
+	for _, line := range in {
+		updatedLine := updateLine(line)
+		out = append(out, updatedLine)
+	}
+
+	fmt.Println(out)
+
+	// ExampleScrape()
 }
