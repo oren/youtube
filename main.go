@@ -43,19 +43,19 @@ func getRecentURL(webpage string) string {
 	return out
 }
 
-func updateLine(line string) string {
+func updateLine(line string) (string, string) {
 	ln := strings.Split(line, " ")
 	recentURL := getRecentURL(ln[0])
 	if len(ln) == 1 || recentURL != ln[1] {
-		return (ln[0] + " " + recentURL + "\n")
+		return ln[0] + " " + recentURL + "\n", ln[0] + " " + recentURL + "\n"
 	}
 
-	return ""
+	return line + "\n", ""
 }
 
 func main() {
 	in := []string{}
-	updatedFile := []string{}
+	outFile := []string{}
 	out := []string{}
 
 	in = loadFile("urls")
@@ -63,10 +63,13 @@ func main() {
 		if line == "" {
 			continue
 		}
-		updatedLine := updateLine(line)
-		if updatedLine != "" {
-			updatedFile = append(updatedFile, updatedLine)
-			out = append(out, "youtube.com"+strings.Split(updatedLine, " ")[1])
+
+		fileLine, outLine := updateLine(line)
+
+		outFile = append(outFile, fileLine)
+
+		if outLine != "" {
+			out = append(out, "youtube.com"+strings.Split(outLine, " ")[1])
 		}
 	}
 
@@ -76,7 +79,7 @@ func main() {
 	}
 	defer f.Close()
 
-	for _, s := range updatedFile {
+	for _, s := range outFile {
 		_, err := f.WriteString(s)
 		if err != nil {
 			fmt.Println(err, "write string to file")
