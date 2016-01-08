@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,17 +12,46 @@ import (
 var (
 	lines      = []string{}
 	outputFile *os.File
+	results    chan result
+	total      int
 )
+
+type result struct {
+	Stdout string
+	Line   string
+}
 
 func init() {
 	lines = loadFile("urls")
+	total = len(lines)
+	results = make(chan result)
+}
+
+func worker(line string, results chan<- result) {
+	ln := strings.Split(line, " ")
+	recentURL := getRecentURL(ln[0])
+	if len(ln) == 1 || recentURL != ln[1] {
+		r := result{
+			Stdout: ln[0] + "\n",
+			Line:   ln[0] + " " + recentURL + "\n",
+		}
+		results <- r
+		return
+	}
+
+	r := result{
+		Stdout: "",
+		Line:   line + "\n",
+	}
+
+	results <- r
 }
 
 func main() {
 	var err error
 	outputFile, err = os.Create("output")
 	if err != nil {
-		fmt.Println(err, "can't create file")
+		log.Println(err, "can't create file")
 	}
 	defer outputFile.Close()
 
@@ -32,14 +60,17 @@ func main() {
 			continue
 		}
 
-		fileLine, outLine := updateLine(line)
+		go worker(line, results)
+	}
 
-		_, err := outputFile.WriteString(fileLine)
+	// collect all the results of the workers
+	for i := 0; i < total-1; i++ {
+		r := <-results
+		os.Stdout.WriteString(r.Stdout)
+		_, err := outputFile.WriteString(r.Line)
 		if err != nil {
-			fmt.Println("write string to file. error: ", err)
+			log.Println("write string to file. error: ", err)
 		}
-
-		os.Stdout.WriteString(outLine)
 	}
 }
 
@@ -59,29 +90,15 @@ func getRecentURL(webpage string) string {
 		log.Fatal("Error scraping webpage: ", err)
 	}
 
-	// url := doc.Find(".yt-uix-sessionlink").First()
-	// fmt.Println("url", url.Find("").Attr("href"))
-	// fmt.Printf("%+v\n", url)
-
 	out := ""
 	doc.Find(".channels-content-item").EachWithBreak(func(i int, s *goquery.Selection) bool {
 		url, exist := s.Find(".yt-uix-sessionlink").Attr("href")
 		if exist == false {
-			fmt.Println("href doesn't exist")
+			log.Println("href doesn't exist")
 		}
 		out = url
 		return false
 	})
 
 	return out
-}
-
-func updateLine(line string) (string, string) {
-	ln := strings.Split(line, " ")
-	recentURL := getRecentURL(ln[0])
-	if len(ln) == 1 || recentURL != ln[1] {
-		return ln[0] + " " + recentURL + "\n", ln[0] + "\n"
-	}
-
-	return line + "\n", ""
 }
