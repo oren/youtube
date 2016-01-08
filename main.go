@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"bufio"
 	"log"
 	"os"
 	"strings"
@@ -22,9 +22,43 @@ type result struct {
 }
 
 func init() {
-	lines = loadFile("urls")
-	total = len(lines)
 	results = make(chan result)
+}
+
+func main() {
+	var err error
+	outputFile, err = os.Create("output")
+	if err != nil {
+		log.Println(err, "can't create file")
+	}
+	defer outputFile.Close()
+
+	inputFile, err := os.Open("urls")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer inputFile.Close()
+
+	total := 0
+	scanner := bufio.NewScanner(inputFile)
+	for scanner.Scan() {
+		total += 1
+		go worker(scanner.Text(), results)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// collect all the results of the workers
+	for i := 0; i < total; i++ {
+		r := <-results
+		os.Stdout.WriteString(r.Stdout)
+		_, err := outputFile.WriteString(r.Line)
+		if err != nil {
+			log.Println("write string to file. error: ", err)
+		}
+	}
 }
 
 func worker(line string, results chan<- result) {
@@ -47,43 +81,7 @@ func worker(line string, results chan<- result) {
 	results <- r
 }
 
-func main() {
-	var err error
-	outputFile, err = os.Create("output")
-	if err != nil {
-		log.Println(err, "can't create file")
-	}
-	defer outputFile.Close()
-
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-
-		go worker(line, results)
-	}
-
-	// collect all the results of the workers
-	for i := 0; i < total-1; i++ {
-		r := <-results
-		os.Stdout.WriteString(r.Stdout)
-		_, err := outputFile.WriteString(r.Line)
-		if err != nil {
-			log.Println("write string to file. error: ", err)
-		}
-	}
-}
-
-func loadFile(filename string) []string {
-	content, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Fatal("can't read file. error: ", err)
-	}
-	lines := strings.Split(string(content), "\n")
-
-	return lines
-}
-
+// fetch webpage and return url for recent video
 func getRecentURL(webpage string) string {
 	doc, err := goquery.NewDocument(webpage)
 	if err != nil {
