@@ -11,12 +11,12 @@ import (
 )
 
 var (
-	inputFile  = []string{}
+	lines      = []string{}
 	outputFile *os.File
 )
 
 func init() {
-	inputFile = loadFile("urls")
+	lines = loadFile("urls")
 }
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	}
 	defer outputFile.Close()
 
-	for _, line := range inputFile {
+	for _, line := range lines {
 		if line == "" {
 			continue
 		}
