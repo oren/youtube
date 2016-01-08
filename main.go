@@ -10,10 +10,43 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+var (
+	inputFile  = []string{}
+	outputFile *os.File
+)
+
+func init() {
+	inputFile = loadFile("urls")
+}
+
+func main() {
+	var err error
+	outputFile, err = os.Create("output")
+	if err != nil {
+		fmt.Println(err, "can't create file")
+	}
+	defer outputFile.Close()
+
+	for _, line := range inputFile {
+		if line == "" {
+			continue
+		}
+
+		fileLine, outLine := updateLine(line)
+
+		_, err := outputFile.WriteString(fileLine)
+		if err != nil {
+			fmt.Println("write string to file. error: ", err)
+		}
+
+		os.Stdout.WriteString(outLine)
+	}
+}
+
 func loadFile(filename string) []string {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatal(err, "can't read file")
+		log.Fatal("can't read file. error: ", err)
 	}
 	lines := strings.Split(string(content), "\n")
 
@@ -23,7 +56,7 @@ func loadFile(filename string) []string {
 func getRecentURL(webpage string) string {
 	doc, err := goquery.NewDocument(webpage)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error scraping webpage: ", err)
 	}
 
 	// url := doc.Find(".yt-uix-sessionlink").First()
@@ -47,46 +80,8 @@ func updateLine(line string) (string, string) {
 	ln := strings.Split(line, " ")
 	recentURL := getRecentURL(ln[0])
 	if len(ln) == 1 || recentURL != ln[1] {
-		return ln[0] + " " + recentURL + "\n", ln[0]
+		return ln[0] + " " + recentURL + "\n", ln[0] + "\n"
 	}
 
 	return line + "\n", ""
-}
-
-func main() {
-	in := []string{}
-	outFile := []string{}
-	out := []string{}
-
-	in = loadFile("urls")
-	for _, line := range in {
-		if line == "" {
-			continue
-		}
-
-		fileLine, outLine := updateLine(line)
-
-		outFile = append(outFile, fileLine)
-
-		if outLine != "" {
-			out = append(out, outLine+"\n")
-		}
-	}
-
-	f, err := os.Create("output")
-	if err != nil {
-		fmt.Println(err, "can't create file")
-	}
-	defer f.Close()
-
-	for _, s := range outFile {
-		_, err := f.WriteString(s)
-		if err != nil {
-			fmt.Println(err, "write string to file")
-		}
-	}
-
-	for _, s := range out {
-		os.Stdout.WriteString(s)
-	}
 }
