@@ -26,6 +26,7 @@ func init() {
 }
 
 func main() {
+	// 1. setup
 	var err error
 	outputFile, err = os.Create("output")
 	if err != nil {
@@ -39,6 +40,7 @@ func main() {
 	}
 	defer inputFile.Close()
 
+	// 2. work
 	total := 0
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
@@ -50,6 +52,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// 3. collect
 	// collect all the results of the workers
 	for i := 0; i < total; i++ {
 		r := <-results
@@ -64,6 +67,7 @@ func main() {
 func worker(line string, results chan<- result) {
 	ln := strings.Split(line, " ")
 	recentURL := getRecentURL(ln[0])
+	// if there is a video i didn't watch
 	if len(ln) == 1 || recentURL != ln[1] {
 		r := result{
 			Stdout: ln[0] + "\n",
@@ -73,6 +77,7 @@ func worker(line string, results chan<- result) {
 		return
 	}
 
+	// i already watched all the videos of this webpage
 	r := result{
 		Stdout: "",
 		Line:   line + "\n",
